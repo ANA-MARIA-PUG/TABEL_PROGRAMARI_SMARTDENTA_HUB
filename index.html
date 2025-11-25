@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <title>PROGRAMARI SMARTDENTA HUB</title>
+    
+    <style>
+        /* --- STILURI GENERALE ȘI POZIȚIONARE (CSS) --- */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f4f4f9;
+        }
+
+        .container {
+            display: flex;
+            gap: 30px;
+            width: 90%;
+            margin: 0 auto;
+        }
+
+        .formular-programare {
+            flex: 1;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background-color: blue;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .tabela-programari {
+            flex: 3;
+            overflow-x: auto;
+        }
+
+        /* --- STILURI FORMULAR --- */
+        .formular-programare label {
+            display: block;
+            margin-top: 10px;
+            font-weight: bold;
+        }
+        
+        .formular-programare input[type="text"],
+        .formular-programare select {
+            width: 100%;
+            padding: 8px;
+            margin-top: 5px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        
+        .formular-programare h2::before {
+            content: "📅 ";
+            margin-right: 5px;
+        }
+
+        .formular-programare button[type="submit"] {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 20px;
+            width: 100%;
+            font-size: 16px;
+        }
+
+        .formular-programare button[type="submit"]:hover {
+            background-color: #0056b3;
+        }
+        
+        #exportCsvButton {
+            margin-top: 15px; 
+            padding: 10px; 
+            background-color: #28a745; 
+            color: white; 
+            border: none; 
+            border-radius: 4px; 
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        /* --- STILURI TABELA --- */
+        table {
+            border-collapse: collapse; 
+            width: 100%;
+            background-color: white;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        th, td {
+            border: 1px solid #ddd;
+            padding: 10px; 
+            text-align: left;
+            vertical-align: middle;
+        }
+
+        th {
+            background-color: #007bff;
+            color: white;
+            font-weight: bold;
+        }
+
+        .titlu {
+            text-align: center;
+            font-weight: bold;
+            background-color: #343a40;
+            color: white;
+            font-size: 1.2em;
+        }
+
+        #listaProgramari tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+
+        .status-select {
+            padding: 5px;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+            background-color: white;
+            font-size: 0.9em;
+            cursor: pointer;
+            width: 100%;
+            box-sizing: border-box;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        
+        <div class="formular-programare">
+            <h2>Adaugă Programare Nouă</h2>
+            <form id="formAdaugaProgramare">
+                
+                <label for="numePacient">Nume Pacient:</label>
+                <input type="text" id="numePacient" required>
+                
+                <label for="numeDoctor">Doctor:</label>
+                <select id="numeDoctor" required onchange="actualizeazaSpecializareSiZile()">
+                    <option value="" disabled selected>Selectează doctorul dorit </option>
+                </select>
+                
+                <label for="specializare">Specializare Doctor:</label>
+                <input type="text" id="specializare" readonly>
+                
+                <label for="ziuaSaptamanii">Ziua saptamanii dorită:</label>
+                <select id="ziuaSaptamanii" required>
+                    <option value="" disabled selected>Selectează ziua dorită</option>
+                </select>
+                
+                <label for="ora">Ora dorită:</label>
+                <select id="ora" required>
+                    <option value="" disabled selected>Selectează ora dorită </option>
+                </select>
+                
+                <button type="submit">Adaugă Programare</button>
+            </form>
+        </div>
+        
+        <div class="tabela-programari">
+            <table>
+                <thead>
+                    <tr>
+                        <td colspan="7" class="titlu">PROGRAMARI SMARTDENTA HUB</td>
+                    </tr>
+                    <tr>
+                        <th>NUMAR PROGRAMARE</th>
+                        <th>DOCTORI</th>
+                        <th>ZIUA SAPTAMANII</th>
+                        <th>ORA</th>
+                        <th>NUME PACIENT</th>
+                        <th>STATUS PROGRAMARE</th>
+                        <th>ACȚIUNI</th> </tr>
+                </thead>
+                <tbody id="listaProgramari"> 
+                    </tbody>
+            </table>
+            <button id="exportCsvButton">Exportă Programări în CSV (Excel)</button>
+        </div>
+    </div>
+
+    <script>
+        // --- DATELE DOCTORILOR (JavaScript) ---
+        const doctoriData = {
+            "Dr. Popescu Ana": { 
+                specializare: "Stomatologie Generala", 
+                program: { 
+                    "Luni": "09:00 - 20:00", 
+                    "Marți": "09:00 - 20:00",
+                    "Miercuri": "09:00 - 20:00",
+                    "Joi": "09:00 - 20:00",
+                    "Vineri": "09:00 - 20:00"
+                } 
+            },
+            "Dr. Popa Andrei": { 
+                specializare: "Chirurgie Maxilo-Facială", 
+                program: { 
+                    "Luni": "10:00 - 18:00", 
+                    "Miercuri": "10:00 - 18:00", 
+                    "Vineri": "09:00 - 16:00" 
+                } 
+            },
+            "Dr. Ionescu Maria": { 
+                specializare: "Pedodonție (Copii)", 
+                program: { 
+                    "Luni": "08:00 - 16:00", 
+                    "Marți": "08:00 - 16:00",
+                    "Miercuri": "08:00 - 16:00",
+                    "Joi": "08:00 - 16:00",
+                    "Vineri": "08:00 - 16:00"
+                } 
+            },
+            "Dr. Stolan Cristian": { 
+                specializare: "Endodonție (Tratamentul Canalelor)", 
+                program: { 
+                    "Luni": "12:00 - 20:00",
+                    "Marți": "12:00 - 20:00",
+                    "Miercuri": "12:00 - 20:00",
+                    "Joi": "12:00 - 20:00",
+                    "Vineri": "12:00 - 20:00"
+                } 
+            },
+            "Dr. Zamfir Elena": { 
+                specializare: "Parodontologie", 
+                program: { 
+                    "Luni": "09:00 - 17:00", 
+                    "Vineri": "09:00 - 17:00"
+                } 
+            },
+            "Dr. Vasilescu Radu": { 
+                specializare: "Protetică Dentară", 
+                program: { 
+                    "Luni": "09:00 - 14:00",
+                    "Marți": "09:00 - 14:00",
+                    "Miercuri": "09:00 - 14:00",
+                    "Joi": "09:00 - 14:00",
+                    "Vineri": "09:00 - 14:00",
+                    "Sâmbătă(Urgențe)": "09:00 - 14:00"
+                } 
+            },
+            "Dr. Gheorghe Alexandra": { 
+                specializare: "Implantologie", 
+                program: { 
+                    "Marți": "10:00 - 18:00",
+                    "Miercuri": "10:00 - 18:00", 
+                    "Joi": "10:00 - 18:00",
+                    "Vineri": "10:00 - 18:00"
+                } 
+            }
+        };
+
+        const STATUSURI_DISPONIBILE = ["În Așteptare", "Confirmată", "Efectuată", "Anulată"];
+
+        // --- REFERINȚE DOM ȘI INIȚIALIZARE ---
+        const form = document.getElementById('formAdaugaProgramare');
+        const listaProgramari = document.getElementById('listaProgramari');
+        const selectDoctor = document.getElementById('numeDoctor');
+        const inputSpecializare = document.getElementById('specializare');
+        const selectZiua = document.getElementById('ziuaSaptamanii');
+        const selectOra = document.getElementById('ora');
+        const exportCsvButton = document.getElementById('exportCsvButton');
+        
+        let appointments = []; 
+        let programareCounter = 1;
+
+        // --- FUNCTII DE STOCARE SI INCARCARE (LOCAL STORAGE) ---
+
+        function saveAppointments() {
+            localStorage.setItem('smartdentaAppointments', JSON.stringify(appointments));
+        }
+
+        function loadAppointments() {
+            const savedData = localStorage.getItem('smartdentaAppointments');
+            if (savedData) {
+                appointments = JSON.parse(savedData);
+            }
+            renderAppointments(); 
+        }
+
+        // --- FUNCTIE PENTRU ȘTERGEREA UNEI PROGRAMĂRI ---
+        function deleteAppointment(indexToDelete) {
+            // 1. Șterge programarea din array-ul appointments pe baza indexului
+            appointments.splice(indexToDelete, 1);
+            
+            // 2. Salvează noul array în localStorage
+            saveAppointments();
+            
+            // 3. Re-randăm tabelul pentru a reflecta schimbarea
+            renderAppointments();
+        }
+
+
+        // --- FUNCTIE DE RANDARE A TABELULUI DIN ARRAY-UL 'appointments' ---
+
+        function renderAppointments() {
+            listaProgramari.innerHTML = ''; // Sterge continutul vechi
+            programareCounter = 1; // Resetam contorul vizual
+
+            appointments.forEach((app, index) => { // IMPORTANT: Preluăm și indexul
+                const newRow = listaProgramari.insertRow();
+                
+                // 1. NUMAR PROGRAMARE
+                newRow.insertCell().textContent = programareCounter++;
+                
+                // 2. DOCTORI
+                newRow.insertCell().textContent = `${app.doctor} (${app.specializare})`;
+                
+                // 3. ZIUA SAPTAMANII
+                newRow.insertCell().textContent = app.ziua;
+                
+                // 4. ORA
+                newRow.insertCell().textContent = app.ora;
+                
+                // 5. NUME PACIENT
+                newRow.insertCell().textContent = app.pacient;
+                
+                // 6. STATUS PROGRAMARE (Interactiv)
+                const cellStatus = newRow.insertCell();
+                const statusSelect = createStatusSelect(app.status);
+                
+                statusSelect.addEventListener('change', (e) => {
+                    app.status = e.target.value;
+                    saveAppointments(); // Salvam statusul nou in localStorage
+                });
+
+                cellStatus.appendChild(statusSelect);
+
+                // 7. ACȚIUNI (Buton Șterge)
+                const cellActions = newRow.insertCell();
+                const deleteButton = document.createElement('button');
+                deleteButton.textContent = 'Șterge';
+                deleteButton.style.cssText = 'background-color: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer;';
+                
+                deleteButton.addEventListener('click', () => {
+                    if (confirm(`Sunteți sigur că doriți să ștergeți programarea nr. ${index + 1} pentru ${app.pacient}?`)) {
+                        deleteAppointment(index);
+                    }
+                });
+
+                cellActions.appendChild(deleteButton);
+            });
+        }
+        
+        // --- FUNCTIE DE POPULARE DOCTORI LA ÎNCĂRCAREA PAGINII ---
+        function populeazaDoctori() {
+            for (const numeDoctor in doctoriData) {
+                const option = document.createElement('option');
+                option.value = numeDoctor;
+                option.textContent = numeDoctor;
+                selectDoctor.appendChild(option);
+            }
+        }
+        
+        // --- LOGICA INTERACTIVA: Actualizează Specializarea, Zilele ȘI Resetează Ora ---
+        window.actualizeazaSpecializareSiZile = function() {
+            const doctorSelectat = selectDoctor.value;
+            
+            if (!doctorSelectat) return;
+
+            const data = doctoriData[doctorSelectat];
+
+            // 1. Actualizăm Specializarea
+            inputSpecializare.value = data.specializare;
+            
+            // 2. Resetăm și populăm Zilele disponibile
+            selectZiua.innerHTML = '<option value="" disabled selected>Selectează ziua</option>';
+            
+            for (const zi in data.program) {
+                const option = document.createElement('option');
+                option.value = `${zi} (${data.program[zi]})`; 
+                option.textContent = `${zi} (${data.program[zi]})`;
+                selectZiua.appendChild(option);
+            }
+            
+            // Resetăm Orele la schimbarea doctorului
+            selectOra.innerHTML = '<option value="" disabled selected>Selectează ora dorită </option>';
+        };
+
+        // --- FUNCTIA CHEIE: POPULEAZĂ ORELE DISPONIBILE (LA SCHIMBAREA ZILEI) ---
+        function populeazaOreDisponibile() {
+            const ziuaSelectataText = selectZiua.value;
+            
+            if (!ziuaSelectataText) return;
+
+            // 1. Extragem intervalul de timp din paranteze
+            const match = ziuaSelectataText.match(/\((.*?)\)/); 
+            if (!match) return;
+
+            const intervalText = match[1];
+            
+            // Scoatem parantezele suplimentare (Ex: Urgențe)
+            const cleanIntervalText = intervalText.replace(/\(.*?\)/g, '').trim(); 
+            const [oraStartStr, oraEndStr] = cleanIntervalText.split(' - ');
+            
+            // 2. Resetăm selectorul de oră
+            selectOra.innerHTML = '<option value="" disabled selected>Selectează ora dorită </option>';
+            
+            // 3. Convertim orele în minute pentru calcul
+            const [hStart, mStart] = oraStartStr.split(':').map(Number);
+            const [hEnd, mEnd] = oraEndStr.split(':').map(Number);
+            
+            let totalMinutesStart = hStart * 60 + mStart;
+            let totalMinutesEnd = hEnd * 60 + mEnd;
+            
+            const intervalProgramare = 30; // 30 de minute
+
+            // 4. Generăm opțiunile de oră
+            for (let currentMinutes = totalMinutesStart; currentMinutes < totalMinutesEnd; currentMinutes += intervalProgramare) {
+                
+                let h = Math.floor(currentMinutes / 60);
+                let m = currentMinutes % 60;
+
+                let oraFormatata = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+                
+                const option = document.createElement('option');
+                option.value = oraFormatata;
+                option.textContent = oraFormatata;
+                selectOra.appendChild(option);
+            }
+        }
+        
+        // Adăugăm Event Listener pe selectarea Zilei
+        selectZiua.addEventListener('change', populeazaOreDisponibile);
+
+        // --- FUNCTIE PENTRU CREAREA SELECTORULUI DE STATUS INTERACTIV ---
+        function createStatusSelect(initialStatus) {
+            const selectElement = document.createElement('select');
+            selectElement.classList.add('status-select'); 
+
+            STATUSURI_DISPONIBILE.forEach(status => {
+                const option = document.createElement('option');
+                option.value = status;
+                option.textContent = status;
+                
+                if (status === initialStatus) {
+                    option.selected = true;
+                }
+                selectElement.appendChild(option);
+            });
+
+            return selectElement;
+        }
+
+        // --- LOGICA EXPORT CSV (EXCEL) ---
+        function exportToCsv() {
+            if (appointments.length === 0) {
+                alert("Nu există programări de exportat!");
+                return;
+            }
+
+            // Folosim PUNCT ȘI VIRGULĂ (;) ca delimitator, cel mai compatibil cu Excel-urile europene
+            const header = ["NUMAR PROGRAMARE", "NUME PACIENT", "DOCTOR", "SPECIALIZARE", "ZIUA SAPTAMANII", "ORA", "STATUS PROGRAMARE"];
+            
+            const csvRows = appointments.map((app, index) => [
+                index + 1,
+                // Înconjurăm textul cu ghilimele pentru a gestiona virgulă din interior (CSV standard)
+                `"${app.pacient.replace(/"/g, '""')}"`,
+                `"${app.doctor.replace(/"/g, '""')}"`,
+                `"${app.specializare.replace(/"/g, '""')}"`,
+                `"${app.ziua.replace(/"/g, '""')}"`,
+                app.ora,
+                app.status
+            ]);
+
+            const csvContent = [
+                header.join(';'), // Folosim ; pentru separare
+                ...csvRows.map(row => row.join(';')) // Folosim ; pentru separare
+            ].join('\n');
+
+            // Creaza un link temporar pentru a forta descarcarea
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.setAttribute('download', 'Programari_SmartDenta.csv');
+            link.click();
+        }
+        
+        // Adaugam event listener pe butonul de export
+        exportCsvButton.addEventListener('click', exportToCsv);
+
+        // --- LOGICA ADĂUGĂRII PROGRAMĂRII (SUBMIT) ---
+        form.addEventListener('submit', function(event) {
+            event.preventDefault();
+
+            // Preluăm valorile
+            const numePacient = document.getElementById('numePacient').value;
+            const numeDoctorVal = selectDoctor.value;
+            const specializareVal = inputSpecializare.value;
+            const ziuaSaptamaniiVal = selectZiua.value;
+            const oraVal = selectOra.value;
+
+            // Creăm noul obiect de programare
+            const newAppointment = {
+                pacient: numePacient,
+                doctor: numeDoctorVal,
+                specializare: specializareVal,
+                ziua: ziuaSaptamaniiVal,
+                ora: oraVal,
+                status: "În Așteptare"
+            };
+
+            // 1. Adăugăm obiectul în array-ul global
+            appointments.push(newAppointment);
+
+            // 2. Salvăm array-ul în localStorage
+            saveAppointments();
+
+            // 3. Re-randăm tabelul pentru a include noul rând
+            renderAppointments();
+            
+            // Resetăm formularul
+            form.reset();
+            inputSpecializare.value = "";
+            selectZiua.innerHTML = '<option value="" disabled selected>Selectează ziua dorită</option>';
+            selectOra.innerHTML = '<option value="" disabled selected>Selectează ora dorită </option>';
+        });
+        
+        // RULAM FUNCTIILE DE INCARCARE SI POPULARE LA START
+        populeazaDoctori();
+        loadAppointments();
+    </script>
+
+</body>
+</html>
